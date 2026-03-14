@@ -9,6 +9,10 @@
 .vscode
 .idea
 
+# clangd cache and generated IntelliSense files
+.cache
+compile_commands.json
+
 # Build artifacts
 build/
 bin/

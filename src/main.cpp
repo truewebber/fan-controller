@@ -1,62 +1,80 @@
 #include <Arduino.h>
-#include "config.h"
-#include "tachometer.h"
-#include "temperature_sensor.h"
-#include "fan_controller.h"
-#include "device_communication.h"
+#include <math.h>
 
-// Global objects
-Tachometer tachometer;
-TemperatureSensor tempSensor;
+#include "config.h"
+#include "fan_controller.h"
+#include "serial_commands.h"
+#include "tachometer.h"
+#include "temp_sensors.h"
+
+namespace {
 FanController fanController;
-DeviceCommunication deviceComm;
+Tachometer tachometer;
+TempSensors tempSensors;
+SerialCommands serialCommands;
+unsigned long lastStatusPrintMs = 0;
+bool autoMode = true;
+
+float mapTempToDemand(float value, float minV, float maxV) {
+    if (value <= minV) return 0.0f;
+    if (value >= maxV) return 1.0f;
+    const float ratio = (value - minV) / (maxV - minV);
+    return powf(ratio, appcfg::kFanCurveExponent);
+}
+
+uint8_t computeAutoPwm(const TempSensors::Sample& s) {
+    const float cpuDemand = s.hasCpu ? mapTempToDemand(s.maxCpuC, appcfg::kCpuTempMinC, appcfg::kCpuTempMaxC) : 0.0f;
+    const float nvmeDemand = s.hasNvme ? mapTempToDemand(s.maxNvmeC, appcfg::kNvmeTempMinC, appcfg::kNvmeTempMaxC) : 0.0f;
+    const float deltaDemand = (s.hasIntake && s.hasExhaust) ? mapTempToDemand(s.deltaC, appcfg::kDeltaTempMinC, appcfg::kDeltaTempMaxC) : 0.0f;
+    const float demand = max(cpuDemand, max(nvmeDemand, deltaDemand));
+    const float pwm = appcfg::kFanPwmMin + demand * (appcfg::kFanPwmMax - appcfg::kFanPwmMin);
+    return static_cast<uint8_t>(constrain(static_cast<int>(pwm + 0.5f), appcfg::kFanPwmMin, appcfg::kFanPwmMax));
+}
+}
 
 void setup() {
-    // Initialize serial communication
-    Serial.begin(9600);
-    
-    // Initialize all modules
-    tachometer.begin();
-    tempSensor.begin();
+    Serial.begin(appcfg::kBaudRate);
+    Serial.println("Fan + Tach controller starting...");
+
     fanController.begin();
-    
-    // IMPORTANT: Set up cross-module communication
-    // Temperature sensor will immediately update fan when new data arrives
-    tempSensor.setFanController(&fanController);
-    
-    deviceComm.begin(&tempSensor);
-    
-    // Log system initialization
-    Serial.println("System Initialized.");
-    Serial.println("Automatic fan control enabled with the following thresholds:");
-    Serial.print("CPU: ");
-    Serial.print(CPU_TEMP_MIN);
-    Serial.print("°C - ");
-    Serial.print(CPU_TEMP_MAX);
-    Serial.println("°C");
-    Serial.print("NVME: ");
-    Serial.print(NVME_TEMP_MIN);
-    Serial.print("°C - ");
-    Serial.print(NVME_TEMP_MAX);
-    Serial.println("°C");
-    Serial.print("Fan curve: Parabolic (exponent = ");
-    Serial.print(FAN_CURVE_EXPONENT);
-    Serial.println(") for more aggressive cooling at high temps");
+    tachometer.begin();
+    tempSensors.begin();
+    serialCommands.begin();
+
+    Serial.println("System ready.");
+    Serial.println("Commands: STATUS, HELP, AUTO ON|OFF, PWM:<0-255> | PWM mode: 25kHz Timer1");
 }
 
 void loop() {
-    // Check if it's time to calculate RPM
-    if (tachometer.shouldCalculateRPM()) {
-        tachometer.calculateRPM();
+    const unsigned long now = millis();
+    tachometer.update(now);
+    const bool hasTempUpdate = tempSensors.update(now);
+
+    const Tachometer::Sample& sample = tachometer.getLastSample();
+    const TempSensors::Sample& temp = tempSensors.getLastSample();
+    serialCommands.process(fanController, sample, temp, autoMode);
+
+    if (autoMode && hasTempUpdate) {
+        fanController.setPwm(computeAutoPwm(temp));
     }
 
-    // Poll devices for temperature data
-    deviceComm.pollDevices();
-    
-    // Fan speed is now updated immediately in temperature sensor callbacks
-    // But we keep this call as a safety backup in case of any issues
-    fanController.updateFanSpeed(tempSensor);
-    
-    // Check for direct commands from devices (outside of polling)
-    deviceComm.checkIncomingData();
+    if (now - lastStatusPrintMs >= appcfg::kStatusPrintIntervalMs) {
+        Serial.print("STATUS pwm=");
+        Serial.print(fanController.getPwm());
+        Serial.print(" auto=");
+        Serial.print(autoMode ? "ON" : "OFF");
+        Serial.print(" pulses=");
+        Serial.print(sample.pulses);
+        Serial.print(" elapsedMs=");
+        Serial.print(sample.elapsedMs);
+        Serial.print(" rpm=");
+        Serial.print(sample.rpm);
+        Serial.print(" cpuMax=");
+        Serial.print(temp.hasCpu ? temp.maxCpuC : 0.0f, 1);
+        Serial.print(" nvmeMax=");
+        Serial.print(temp.hasNvme ? temp.maxNvmeC : 0.0f, 1);
+        Serial.print(" delta=");
+        Serial.println(temp.deltaC, 1);
+        lastStatusPrintMs = now;
+    }
 }

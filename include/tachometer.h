@@ -2,31 +2,29 @@
 #define TACHOMETER_H
 
 #include <Arduino.h>
-#include "config.h"
 
 class Tachometer {
-private:
-    static volatile unsigned int tachCount;
-    static volatile unsigned int rpm;
-    unsigned long lastRpmCalcTime;
-
 public:
-    Tachometer();
-    
-    // Initialize tachometer (setup interrupt)
+    struct Sample {
+        unsigned int rpm = 0;
+        unsigned int pulses = 0;
+        unsigned long elapsedMs = 0;
+    };
+
     void begin();
-    
-    // Calculate RPM based on tach count
-    void calculateRPM();
-    
-    // Get current RPM value
-    unsigned int getRPM() const;
-    
-    // Check if it's time to calculate RPM
-    bool shouldCalculateRPM() const;
-    
-    // Interrupt service routine (must be static)
-    static void tachISR();
+    bool update(unsigned long nowMs);
+    const Sample& getLastSample() const;
+
+    static void isrThunk();
+
+private:
+    static volatile unsigned int sPulseCount;
+    static Tachometer* sInstance;
+
+    unsigned long lastCalcMs_ = 0;
+    Sample lastSample_{};
+
+    void onPulse();
 };
 
-#endif // TACHOMETER_H
+#endif  // TACHOMETER_H

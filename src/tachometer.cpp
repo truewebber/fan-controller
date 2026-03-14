@@ -1,44 +1,54 @@
 #include "tachometer.h"
 
-// Static variable definitions
-volatile unsigned int Tachometer::tachCount = 0;
-volatile unsigned int Tachometer::rpm = 0;
+#include "config.h"
 
-Tachometer::Tachometer() : lastRpmCalcTime(0) {
-}
+volatile unsigned int Tachometer::sPulseCount = 0;
+Tachometer* Tachometer::sInstance = nullptr;
 
 void Tachometer::begin() {
-    pinMode(TACH_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(TACH_PIN), tachISR, FALLING);
-    Serial.println("Tachometer initialized");
+    sInstance = this;
+    pinMode(appcfg::kTachPin, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(appcfg::kTachPin), Tachometer::isrThunk, FALLING);
+    lastCalcMs_ = millis();
 }
 
-void Tachometer::calculateRPM() {
+bool Tachometer::update(unsigned long nowMs) {
+    const unsigned long elapsed = nowMs - lastCalcMs_;
+    if (elapsed < appcfg::kRpmCalcIntervalMs) {
+        return false;
+    }
+
     noInterrupts();
-    unsigned int count = tachCount;
-    tachCount = 0;
+    const unsigned int pulses = sPulseCount;
+    sPulseCount = 0;
     interrupts();
 
-    // Calculate RPM - using fixed time interval for more stable readings
-    rpm = count * 30;
-    
-    // Log RPM via Serial
-    Serial.print("RPM: ");
-    Serial.print(rpm);
-    Serial.print(" | count: ");
-    Serial.println(count);
-    
-    lastRpmCalcTime = millis();
+    lastSample_.pulses = pulses;
+    lastSample_.elapsedMs = elapsed;
+
+    // RPM = pulses * 60000 / (pulses_per_rev * elapsed_ms)
+    if (elapsed > 0) {
+        lastSample_.rpm = static_cast<unsigned int>(
+            (static_cast<unsigned long>(pulses) * 60000UL) /
+            (static_cast<unsigned long>(appcfg::kTachPulsesPerRevolution) * elapsed));
+    } else {
+        lastSample_.rpm = 0;
+    }
+
+    lastCalcMs_ = nowMs;
+    return true;
 }
 
-unsigned int Tachometer::getRPM() const {
-    return rpm;
+const Tachometer::Sample& Tachometer::getLastSample() const {
+    return lastSample_;
 }
 
-bool Tachometer::shouldCalculateRPM() const {
-    return (millis() - lastRpmCalcTime >= RPM_CALC_INTERVAL);
+void Tachometer::isrThunk() {
+    if (sInstance != nullptr) {
+        sInstance->onPulse();
+    }
 }
 
-void Tachometer::tachISR() {
-    tachCount++;
+void Tachometer::onPulse() {
+    sPulseCount++;
 }
