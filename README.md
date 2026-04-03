@@ -3,7 +3,7 @@
 Arduino firmware for controlling a 4-pin PWM fan using:
 
 - tachometer feedback (`TACH`)
-- 10x DS18B20 temperature sensors on one OneWire bus
+- 10x GX18B20S temperature sensors on one OneWire bus
 - automatic fan curve logic based on:
   - max CPU temperature
   - max NVMe temperature
@@ -20,7 +20,7 @@ Arduino firmware for controlling a 4-pin PWM fan using:
 
 - `D9`  -> fan PWM (Timer1 / OC1A, 25kHz)
 - `D3`  -> fan tachometer input
-- `D2`  -> OneWire bus for DS18B20
+- `D2`  -> OneWire bus for GX18B20S
 - `GND` -> common ground (Arduino + fan + sensor bus)
 
 ## Sensor Map (10 total)
@@ -44,7 +44,7 @@ At boot firmware prints discovered ROM addresses with indices.
 
 - `src/pwm_output.cpp`: low-level Timer1 PWM (25kHz)
 - `src/tachometer.cpp`: interrupt pulse counting and RPM calculation
-- `src/temp_sensors.cpp`: OneWire scan and DS18B20 sampling
+- `src/temp_sensors.cpp`: OneWire scan and GX18B20S sampling
 - `src/fan_controller.cpp`: fan PWM clamp and output
 - `src/serial_commands.cpp`: command parser (`STATUS`, `PWM`, `AUTO`)
 - `src/main.cpp`: wiring/orchestration loop
@@ -53,7 +53,7 @@ At boot firmware prints discovered ROM addresses with indices.
 
 Every temperature update:
 
-1. Read all DS18B20 sensors
+1. Read all GX18B20S sensors
 2. Compute:
    - `maxCpuC` from CPU sensors
    - `maxNvmeC` from NVMe sensors
