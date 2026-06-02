@@ -6,10 +6,11 @@ CompileFlags:
     - -fno-fat-lto-objects
     - -fno-threadsafe-statics
     - -fpermissive
-  Add:
-    - --target=avr
-    - -D__AVR_ARCH__=5
-    - -D__AVR_ATmega328P__=1
+    - -mlongcalls
+    - -mtext-section-literals
+    - -free
+    - -fipa-pta
+    - -Werror=*
 
 Diagnostics:
   UnusedIncludes: None

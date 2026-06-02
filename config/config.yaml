@@ -1,0 +1,90 @@
+# ESP-12F Fan Controller — human-readable configuration source
+#
+# Workflow:
+#   1. Edit this file.
+#   2. Convert to JSON:
+#        yq -o json . config/config.yaml > /tmp/config.json
+#   3. Upload to running device:
+#        curl -X PUT -H 'Content-Type: application/json' \
+#             --data-binary @/tmp/config.json \
+#             http://<device-ip>/config
+#      Device validates, saves, and restarts automatically.
+#
+# Or flash the LittleFS image for factory reset:
+#   cp config/config.yaml-derived.json data/config.json
+#   pio run -e esp12f -t uploadfs
+
+version: 1
+baud_rate: 115200
+
+# Wi-Fi credentials
+wifi_ssid: ""
+wifi_password: ""
+
+# GPIO pins — ESP-12F safe GPIOs (avoid 0, 2, 6-11, 15, 16)
+fan_pwm_pin: 4    # GPIO4
+tach_pin: 5       # GPIO5
+onewire_pin: 14   # GPIO14
+
+# Fan PWM — 8-bit range (0-255), software PWM at 25 kHz
+fan_pwm_min: 30
+fan_pwm_max: 255
+pwm_frequency_hz: 25000
+pwm_active_low: false
+
+# Tachometer
+tach_pulses_per_revolution: 2
+rpm_calc_interval_ms: 1000
+
+# DS18B20 temperature sensors
+temp_read_interval_ms: 3000
+
+# Auto-control thresholds (°C)
+cpu_temp_min_c:   40.0
+cpu_temp_max_c:   75.0
+nvme_temp_min_c:  40.0
+nvme_temp_max_c:  70.0
+delta_temp_min_c: 5.0
+delta_temp_max_c: 15.0
+fan_curve_exponent: 2.5
+
+status_print_interval_ms: 5000
+
+# DS18B20 ROM addresses — 16 hex chars (family code must be 28)
+sensors:
+  - slot: 0
+    name: rpi1_cpu
+    # address: "28C91D7B02250ED5"
+    address: "28B64BB91000007A" # test
+  - slot: 1
+    name: rpi1_nvme
+    # address: "287AC07C02250EBF"
+    address: "28F84CB91000004D" # test
+  - slot: 2
+    name: rpi2_cpu
+    # address: "28CDE16A02250E39"
+    address: "280B95B810000044" # test
+  - slot: 3
+    name: rpi2_nvme
+    # address: "282E566802250E50"
+    address: "282D1FB9100000B9" # test
+  - slot: 4
+    name: rpi3_cpu
+    address: "282BFA5B02250E69"
+  - slot: 5
+    name: rpi3_nvme
+    address: "28C1E34B02250E38"
+  - slot: 6
+    name: rpi4_cpu
+    address: "281DD57602250E4C"
+  - slot: 7
+    name: rpi4_nvme
+    address: "28455B5002250ED3"
+  - slot: 8
+    name: intake
+    # address: "281DF86802250E75"
+    address: "28BB54BD1000002D" # test
+  - slot: 9
+    name: exhaust
+    # address: "285D207A02250E5F"
+    address: "286EAEBD10000019" # test

@@ -1,3 +1,9 @@
+# Local overrides with credentials — never commit
+config/config.local.yaml
+
+# Generated config with Wi-Fi credentials — never commit
+data/config.json
+
 # PlatformIO
 .pio
 .pioenvs
