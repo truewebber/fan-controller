@@ -190,7 +190,8 @@ void loop() {
         Serial.print(" cpu=");   Serial.print(dtostrf(tmp.hasCpu  ? tmp.maxCpuC  : 0.0f, 4, 1, fb));
         Serial.print(" nvme=");  Serial.print(dtostrf(tmp.hasNvme ? tmp.maxNvmeC : 0.0f, 4, 1, fb));
         Serial.print(" delta="); Serial.print(dtostrf(tmp.deltaC, 4, 1, fb));
-        Serial.print(" rssi=");       Serial.println(wifi.rssi());
+        Serial.print(" rssi=");  Serial.print(metricsSnap.wifiRssi);
+        Serial.print(" stack="); Serial.println(ESP.getFreeContStack());
         lastStatusMs = now;
     }
 

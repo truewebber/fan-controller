@@ -54,20 +54,16 @@ status_print_interval_ms: 5000
 sensors:
   - slot: 0
     name: rpi1_cpu
-    # address: "28C91D7B02250ED5"
-    address: "28B64BB91000007A" # test
+    address: "28C91D7B02250ED5"
   - slot: 1
     name: rpi1_nvme
-    # address: "287AC07C02250EBF"
-    address: "28F84CB91000004D" # test
+    address: "287AC07C02250EBF"
   - slot: 2
     name: rpi2_cpu
-    # address: "28CDE16A02250E39"
-    address: "280B95B810000044" # test
+    address: "28CDE16A02250E39"
   - slot: 3
     name: rpi2_nvme
-    # address: "282E566802250E50"
-    address: "282D1FB9100000B9" # test
+    address: "282E566802250E50"
   - slot: 4
     name: rpi3_cpu
     address: "282BFA5B02250E69"
@@ -82,9 +78,7 @@ sensors:
     address: "28455B5002250ED3"
   - slot: 8
     name: intake
-    # address: "281DF86802250E75"
-    address: "28BB54BD1000002D" # test
+    address: "2853264F02250E19"
   - slot: 9
     name: exhaust
-    # address: "285D207A02250E5F"
-    address: "286EAEBD10000019" # test
+    address: "2879A07202250EE2"

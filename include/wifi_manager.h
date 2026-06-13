@@ -9,9 +9,14 @@ public:
                  unsigned long timeoutMs = 20000);
 
     // Call every loop iteration — reconnects silently if dropped.
+    // Reconnect attempts are throttled to at most once per kReconnectIntervalMs.
     void maintain();
 
     bool isConnected() const;
     int32_t rssi() const;
     String localIP() const;
+
+private:
+    static constexpr unsigned long kReconnectIntervalMs = 5000;
+    unsigned long lastReconnectMs_ = 0;
 };

@@ -27,10 +27,14 @@ bool WifiManager::connect(const char* ssid, const char* password,
 }
 
 void WifiManager::maintain() {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("[wifi] reconnecting...");
-        WiFi.reconnect();
-    }
+    if (WiFi.status() == WL_CONNECTED) return;
+
+    const unsigned long now = millis();
+    if (now - lastReconnectMs_ < kReconnectIntervalMs) return;
+
+    lastReconnectMs_ = now;
+    Serial.println("[wifi] reconnecting...");
+    WiFi.reconnect();
 }
 
 bool WifiManager::isConnected() const {
